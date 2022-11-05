@@ -22,8 +22,8 @@ extern "C" {
 
     typedef enum SPI_SHIFT_REG {
         //  NC            1<<0
-        LED_ERR = 1 << 1,
-        LED_USER = 1 << 2,
+        LED_ERR = 1 << 2,
+        LED_USER = 1 << 1,
         BAT_FULL_GREEN = 1 << 3,
         BAT_MID_RED = 1 << 4,
         BAT_MID_GREEN = 1 << 5,
@@ -78,6 +78,8 @@ extern "C" {
 #define MOTOR_B_FORWARD() do { spidata &= ~MOTOR_B_DIR; } while(0)
 #define MOTOR_A_BACKWARD() do { spidata |= MOTOR_A_DIR; } while(0)
 #define MOTOR_B_BACKWARD() do { spidata |= MOTOR_B_DIR; } while(0)
+#define MOTOR_A_DIRECTION() (spidata & MOTOR_A_DIR)
+#define MOTOR_B_DIRECTION() (spidata & MOTOR_B_DIR)
     
 #define MOTOR_A_SPI_ENABLE() do { spidata &= ~SS_B; spidata |= SS_A; } while(0)    
 #define MOTOR_B_SPI_ENABLE() do { spidata &= ~SS_A; spidata |= SS_B; } while(0)
