@@ -253,10 +253,10 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                     TWI0_WriteByte(TCB1_read_duty_cycle());
                     break;
                 case I2C2_MOTOR_1_DIR:
-                    TWI0_WriteByte(TCB0_Read());
+                    TWI0_WriteByte(MOTOR_A_DIRECTION());
                     break;
                 case I2C2_MOTOR_0_DIR:
-                    TWI0_WriteByte(TCB1_Read());
+                    TWI0_WriteByte(MOTOR_B_DIRECTION());
                     break;
 
                 case I2C2_MOTOR_ERROR_STATE:
@@ -415,6 +415,7 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         break;
                     case I2C2_ENABLE_MOTORS:
                         if (data == 0) {
+                            Stabalization_lockout();
                             MOTORS_DISABLE();
                             I2C2_MotorState = 0;
                             Clear_LED_Error(ERR_MOTOR_TRIP);
@@ -431,6 +432,7 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         break;
                     case I2C2_ENABLE_MOTOR_PWR:
                         if (data == 0) {
+                            Stabalization_lockout();
                             MOTOR_PWR_SetLow();
                             I2C2_SystemState &= ~I2C2_System_MotorPower_Fault;
                             Clear_LED_Error(ERR_CURRENT_TRIP_A);
@@ -443,6 +445,7 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         break;
                     case I2C2_ENABLE_12V_ACC:
                         if (data == 0) {
+                            Stabalization_lockout();
                             ACC12V_PWR_SetLow();
                             I2C2_SystemState &= ~I2C2_System_12v_Fault;
                             Clear_LED_Error(ERR_CURRENT_TRIP_B);
@@ -453,6 +456,7 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         break;
                     case I2C2_ENABLE_5V_ACC:
                         if (data == 0) {
+                            Stabalization_lockout();
                             ACC5V_PWR_SetLow();
                             I2C2_SystemState &= ~I2C2_System_5v_Fault;
                             Clear_LED_Error(ERR_LOW_VOLTAGE_5V);
