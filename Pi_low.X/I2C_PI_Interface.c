@@ -5,7 +5,7 @@
 #include "SPI.h"
 #include "Error_Indicator.h"
 
-#define REVISION 10
+#define REVISION 11
 
 
 /* Status variables */
