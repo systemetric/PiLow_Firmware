@@ -78,7 +78,9 @@ void TWI0_Deinitialize(void);
  * @param [in] wrByte - TWI0 client write byte
  * @return void
  */
-void TWI0_WriteByte(uint8_t wrByte);
+//void TWI0_WriteByte(uint8_t wrByte);
+#define TWI0_WriteByte(wrByte) TWI0.SDATA = (wrByte)
+
 
 /**
  * @ingroup I2C_client
@@ -86,7 +88,9 @@ void TWI0_WriteByte(uint8_t wrByte);
  * @param void
  * @return data byte -TWI0 client read byte
  */
-uint8_t TWI0_ReadByte(void);
+//uint8_t TWI0_ReadByte(void);
+#define  TWI0_ReadByte() (TWI0.SDATA)
+
 
 /**
  * @ingroup I2C_client
@@ -94,7 +98,9 @@ uint8_t TWI0_ReadByte(void);
  * @param void
  * @return address byte -TWI0 client read byte
  */
-uint16_t TWI0_ReadAddr(void);
+//uint16_t TWI0_ReadAddr(void);
+#define TWI0_ReadAddr() (TWI0.SADDR >> 1)
+
 
 /**
  * @ingroup I2C_client

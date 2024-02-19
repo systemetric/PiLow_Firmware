@@ -30,6 +30,9 @@
     EXCEED AMOUNT OF FEES, IF ANY, YOU PAID DIRECTLY TO MICROCHIP FOR 
     THIS SOFTWARE.
  */
+// define this to prevent the AVR signalling the pi
+#undef NOSHUTDOWN
+
 #include <avr/sleep.h>
 
 #include "mcc_generated_files/system/system.h"
@@ -41,6 +44,18 @@
 #include "ADC.h"
 #include "Error_Indicator.h"
 #include "mcc_generated_files/reset/rstctrl.h"
+
+
+uint16_t gpioCounter0,gpioCounter2 = 0;
+void GPIOCounter0_Update(void) {
+    gpioCounter0 += GPIO1_GetValue()?-1:1;
+
+}
+void GPIOCounter2_Update(void) {
+    gpioCounter2 += GPIO3_GetValue()?-1:1;
+
+}
+
 
 int main(void) {
 
@@ -122,7 +137,7 @@ int main(void) {
                     // Pi Detected running, load up all the helpers
                     TCB0_load_top(0xff);
                     TCB1_load_top(0xff);
-                    TCB0_load_duty_cycle(0x0);
+                    TCB0_load_duty_cycle(0x00);
                     TCB1_load_duty_cycle(0x00);
                     MOTOR_PWR_SetHigh(); // debug
                     //MOTORS_ENABLE();    // debug
@@ -141,6 +156,10 @@ int main(void) {
                     // use the RTC-PI interrupt to flash the error state
                     // use the RTC-PI interrupt to trigger SPI reload instead of running continious?
                     RTC_SetPITIsrCallback(Peroidic_worker);
+                    
+                    GPIO0_HANDLER(GPIOCounter0_Update);
+                    GPIO2_HANDLER(GPIOCounter2_Update);
+                    
                     LED_USER_SetLow();
                     LED_ERR_SetLow();
 
@@ -150,22 +169,20 @@ int main(void) {
             }
             case SSM_FullPower:
             {
+#ifndef NO_SHUTDOWN
                 if (nPI_RUNNING_GetValue() || !battery_ok) {
                     //if the PI is shut down (odd?) or the battery is critically low
                     RTC_WriteCounter(0);
                     state = SSM_ShutDownPI;
                 }
-                else {
-                    SPI_worker();
-                }
+#endif
+                SPI_worker();
                 break;
             }
             case SSM_ShutDownPI:
 
                 nSHUTDOWN_SetLow();
                 nSHUTDOWN_SetDigitalOutput();
-
-                //break;
                 ACC12V_PWR_SetLow();
                 MOTOR_PWR_SetLow();
                 ACC5V_PWR_SetLow();

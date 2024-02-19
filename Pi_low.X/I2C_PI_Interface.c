@@ -1,24 +1,11 @@
 #include "mcc_generated_files/system/system.h"
-#include "I2C_PI_Interface.h"
+#include "I2C_PI_Interface.h" 
 #include "Servo_PWM.h"
 #include "ADC.h"
 #include "SPI.h"
 #include "Error_Indicator.h"
 
-#define REVISION 11
-
-
-/* Status variables */
-//uint8_t Motor_A_Mag = 0;
-//uint8_t Motor_B_Mag = 0;
-//bool Motor_A_Forward = true;
-//bool Motor_B_Forward = true;
-
-uint8_t I2C2_MotorState = 0;
-uint8_t I2C2_SystemState = 0;
-uint8_t debug40 [10] = {0};
-
-// preprocessor functions because of the pin name issues
+#define REVISION 32
 
 #define WRITE_D(PIN, DATA) { \
 if (!DATA) PIN ## _SetLow(); \
@@ -26,6 +13,7 @@ else       PIN ## _SetHigh();\
 } 
 
 #define REPORT_IO_STATE(PIN) { \
+/*to do: dectect counter type by interrupt state*/\
 if (query_ADC_Channel(ADC0_channel_ ## PIN)) TWI0_WriteByte(GPIO_INPUT_ANL); \
 else if (query_PWM_channel(PWM_ ## PIN))     TWI0_WriteByte(GPIO_PWM_SERVO); \
 else if (PIN ## _GetOutputDir())             TWI0_WriteByte(GPIO_OUT); \
@@ -40,32 +28,76 @@ switch (STATE) { \
         disable_PWM_channel(PWM_ ## PIN);\
         PIN ## _SetDigitalOutput();\
         PIN ## _ResetPullUp();\
+        PIN ## _DisableInterruptOnChange();\
         break;\
     case GPIO_INPUT:\
         disable_ADC_Channel(ADC0_channel_ ## PIN);\
         disable_PWM_channel(PWM_ ## PIN);\
         PIN ## _SetDigitalInput();\
         PIN ## _ResetPullUp();\
+        PIN ## _DisableInterruptOnChange();\
         break;\
     case GPIO_INPUT_ANL:\
         enable_ADC_Channel(ADC0_channel_ ## PIN);\
         disable_PWM_channel(PWM_ ## PIN);\
         PIN ## _SetDigitalInput();\
         PIN ## _ResetPullUp();\
+        PIN ## _DisableInterruptOnChange();\
         break;\
     case GPIO_INPUT_PULL:\
         disable_ADC_Channel(ADC0_channel_ ## PIN);\
         disable_PWM_channel(PWM_ ## PIN);\
         PIN ## _SetDigitalInput();\
         PIN ## _SetPullUp();\
+        PIN ## _DisableInterruptOnChange();\
         break;\
     case GPIO_PWM_SERVO:\
         disable_ADC_Channel(ADC0_channel_ ## PIN);\
         enable_PWM_channel(PWM_ ## PIN);\
         PIN ## _SetDigitalOutput();\
         PIN ## _ResetPullUp();\
+        PIN ## _DisableInterruptOnChange();\
+        break;\
+    case GPIO_COUNTER:\
+        disable_ADC_Channel(ADC0_channel_ ## PIN);\
+        disable_PWM_channel(PWM_ ## PIN);\
+        PIN ## _SetDigitalInput();\
+        PIN ## _SetPullUp();\
+        PIN ## _EnableInterruptForRisingEdge();\
+        break;\
     } \
 }
+
+/* Status variables */
+//uint8_t Motor_A_Mag = 0;
+//uint8_t Motor_B_Mag = 0;
+//bool Motor_A_Forward = true;
+//bool Motor_B_Forward = true;
+
+uint8_t I2C2_MotorState = 0;
+uint8_t I2C2_SystemState = 0;
+uint8_t debug40 [10] = {0};
+#define STRING_LEN 0x7f
+char i2cstring [STRING_LEN] = "Brainbox3.1 beta -  Robocon (c) Will Munns. " __TIME__ " " __DATE__;
+uint8_t debug_ptr = 0;
+bool debug_enable = false;
+
+void write_debug_char(uint8_t data) {
+    if (!debug_enable)
+        return;
+    if (debug_ptr >= STRING_LEN)
+        debug_ptr = 0;
+    i2cstring[debug_ptr++] = data;
+}
+
+void write_debug_string(char* data_array) {
+    int ptr = 0;
+    while (data_array[ptr]) {
+        write_debug_char(ptr++);
+    }
+}
+
+
 
 bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
     // behaviour observed: Address match always followed by a RX means the device 
@@ -74,19 +106,15 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
     // in ascending order
     // consecutive reads are reads to this address and the following addresses in 
     // ascending order
-    static char i2cstring [64] = "Brainbox3.0 beta -  Robocon (c) Will Munns";
-    //  STATUS_SetHigh(); 
     static uint8_t addr = 0;
     static bool next_rx_is_address = false;
     static uint8_t storedLowValue;
     uint8_t data;
     switch (event) {
         case I2C_CLIENT_TRANSFER_EVENT_ADDR_MATCH:
-            // if you're happy and you know it clap your hands
             next_rx_is_address = true;
             break;
         case I2C_CLIENT_TRANSFER_EVENT_TX_READY:
-            /* In the callback, client must write to transmit register by calling I2Cx_WriteByte() */
             switch (addr++) {
                 case I2C2_PWM0_H:
                     TWI0_WriteByte(PWM_PWM0_Pulse_Len >> 8);
@@ -293,42 +321,44 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                     break;
 
                 case I2C2_DEBUG56:
-                    TWI0_WriteByte(debug40[6]);
+                    TWI0_WriteByte((uint8_t) ((uint16_t) gpioCounter0 >> 8 ));
+                    storedLowValue = (uint8_t) gpioCounter0;
                     break;
 
                 case I2C2_DEBUG57:
-                    TWI0_WriteByte(debug40[7]);
+                    TWI0_WriteByte(storedLowValue);
                     break;
 
                 case I2C2_DEBUG58:
-                    TWI0_WriteByte(debug40[8]);
+                    TWI0_WriteByte((uint8_t) ((uint16_t) gpioCounter2 >> 8));
+                    storedLowValue = (uint8_t) gpioCounter2;
                     break;
-
+                    
                 case I2C2_DEBUG59:
-                    TWI0_WriteByte(debug40[9]);
+                    TWI0_WriteByte(storedLowValue);
                     break;
 
                 case I2C2_STRING:
                 default:
-                    if (addr - 1 > I2C2_STRING && addr - 64 < I2C2_STRING)
-                        TWI0_WriteByte(i2cstring[(addr - 2) - I2C2_STRING]);
+                    if (addr > I2C2_STRING)
+                        TWI0_WriteByte(i2cstring[(addr - 1) - I2C2_STRING]);
                     else
-                        if (addr > 0x80) {
-                        TWI0_WriteByte(ADC_results[addr - 0x81] / 256);
-                    } else
                         TWI0_WriteByte(0xff);
                     break;
             }
+
             break;
         case I2C_CLIENT_TRANSFER_EVENT_RX_READY:
             /* TWI Host wants to write. In the callback, client must read data by calling I2Cx_ReadByte()  */
             data = TWI0_ReadByte();
+
             if (next_rx_is_address) {
                 addr = data;
                 next_rx_is_address = false;
             } else {
                 // temp variable to store high (software writes high then low over I2C when sending 16 bits)
                 static uint16_t HighValStore = 0;
+
                 switch (addr++) {
                     case I2C2_PWM0_H:
                     case I2C2_PWM1_H:
@@ -365,7 +395,7 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                     case I2C2_GPIO3_C:
                         SET_IO_STATE(GPIO3, data);
                         break;
-                        
+
                     case I2C2_PWM0_C:
                         SET_IO_STATE(PWM0, data);
                         break;
@@ -377,22 +407,22 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         break;
                     case I2C2_PWM3_C:
                         SET_IO_STATE(PWM3, data);
-                        break;                     
-         
+                        break;
+
 
                     case I2C2_GPIO0_D:
                         WRITE_D(GPIO0, data);
                         break;
                     case I2C2_GPIO1_D:
                         WRITE_D(GPIO1, data);
-                        break;                    
+                        break;
                     case I2C2_GPIO2_D:
                         WRITE_D(GPIO2, data);
-                        break;                    
+                        break;
                     case I2C2_GPIO3_D:
                         WRITE_D(GPIO3, data);
                         break;
-                    
+
                     case I2C2_PWM0_D:
                         WRITE_D(PWM0, data);
                         break;
@@ -405,9 +435,9 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                     case I2C2_PWM3_D:
                         WRITE_D(PWM3, data);
                         break;
-                      
 
-                   
+
+
                     case I2C2_UNSAFE_MODE:
                         // unsafe mode stops driving the Power control and leaves it tristate 
                         // needed prior to programming ??
@@ -496,11 +526,31 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                         SPI_Update();
                         break;
 
-                        //default: // If not one of above cases, do nothing
+                    case I2C2_DEBUG_CLEAR:
+                        debug_ptr = 0;
+                        while (debug_ptr != 0xff)
+                            write_debug_char(0);
+                            break;
+                            
+                    case I2C2_DEBUG_ENABLE:
+                        debug_enable = true;
+                        break;
+                        
+                    case I2C2_DEBUG_DISABLE:
+                        debug_enable = false;
+                        break;
+                        
+                    default:; // If not one of above cases, do nothing
+
                 }
             }
             break;
+
+        case I2C_CLIENT_TRANSFER_EVENT_NONE:
+        case I2C_CLIENT_TRANSFER_EVENT_STOP_BIT_RECEIVED:
+        case I2C_CLIENT_TRANSFER_EVENT_ERROR:
         default:;
+
     }
     return true;
 }

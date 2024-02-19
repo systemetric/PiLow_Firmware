@@ -11,9 +11,12 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-    
+
     extern uint8_t debug40 [10];
     
+    extern uint16_t gpioCounter0;
+    extern uint16_t gpioCounter2;
+
 
     bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event);
 
@@ -78,7 +81,7 @@ extern "C" {
 
         // PWM ports are just GPIO but with -+S plug , maybe we should treat them as such?    
 
-        
+
         I2C2_GPIO0_PWM_H = 48,
         I2C2_GPIO0_PWM_L = 49,
         I2C2_GPIO1_PWM_H = 50,
@@ -87,7 +90,7 @@ extern "C" {
         I2C2_GPIO2_PWM_L = 53,
         I2C2_GPIO3_PWM_H = 54,
         I2C2_GPIO4_PWM_L = 55,
-                
+
         I2C2_PWM0_AH = 56,
         I2C2_PWM0_AL = 57,
         I2C2_PWM1_AH = 58,
@@ -96,17 +99,17 @@ extern "C" {
         I2C2_PWM2_AL = 61,
         I2C2_PWM3_AH = 62,
         I2C2_PWM3_AL = 63,
-                
-        I2C2_PWM0_C = 64, 
+
+        I2C2_PWM0_C = 64,
         I2C2_PWM1_C = 65,
         I2C2_PWM2_C = 66,
         I2C2_PWM3_C = 67,
 
-        I2C2_PWM0_D = 68,   
-        I2C2_PWM1_D = 69,   
-        I2C2_PWM2_D = 70,   
-        I2C2_PWM3_D = 71,   
-                
+        I2C2_PWM0_D = 68,
+        I2C2_PWM1_D = 69,
+        I2C2_PWM2_D = 70,
+        I2C2_PWM3_D = 71,
+
         // allow setting of GPIO as PWM ports  
 
         // these are useful for probing SFR's during developemnt, 
@@ -129,7 +132,11 @@ extern "C" {
         I2C2_DEBUG5e = 0x5e,
         I2C2_DEBUG5f = 0x5f,
 
-        I2C2_STRING = 0x80
+        I2C2_STRING = 0x80,
+                
+        I2C2_DEBUG_CLEAR = 0x81,
+        I2C2_DEBUG_ENABLE = 0x82,
+        I2C2_DEBUG_DISABLE = 0x83
 
     } I2C2_eepromAdress;
 
@@ -139,6 +146,7 @@ extern "C" {
         GPIO_INPUT_ANL = 2,
         GPIO_INPUT_PULL = 3,
         GPIO_PWM_SERVO = 4,
+        GPIO_COUNTER = 7,
         // GPIO_PWM_MARK_SPACE =5,
         // GPIO_ULTRASONIC (needs two GPIO, how to force this?) = 6
     } I2C2_GPIO_STATE;
@@ -165,8 +173,16 @@ extern "C" {
     extern uint8_t I2C2_MotorState;
     extern uint8_t I2C2_SystemState;
 
+    
+    void write_debug_char(uint8_t data);
+    void write_debug_string(char* data_array);
+
+
+
+    // preprocessor functions because of the pin name issues
 #ifdef	__cplusplus
 }
+
 #endif
 
 #endif	/* I2C_PI_INTERFACE_H */
