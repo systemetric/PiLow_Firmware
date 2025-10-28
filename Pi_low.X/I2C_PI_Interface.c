@@ -5,7 +5,7 @@
 #include "SPI.h"
 #include "Error_Indicator.h"
 
-#define REVISION 11
+#define REVISION 12
 
 
 /* Status variables */
@@ -195,10 +195,15 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
                     break;
 
                 case I2C2_BATTV_H:
+                {
+                    /* battery voltage is read from the ADC, but first it is clipped by the zenner voltage
+                       this math corrects that */
+                    
                     TWI0_WriteByte((uint8_t) ((uint16_t) ADC_results[ADC0_channel_V_SENSE] / (uint16_t) 256));
-                    storedLowValue = (uint8_t) (ADC_results[ADC0_channel_V_SENSE]);
+                    storedLowValue = (uint8_t) ((uint8_t) (ADC_results[ADC0_channel_V_SENSE]));
                     break;
-
+                    
+                }
                 case I2C2_PWM0_AH:
                     TWI0_WriteByte((uint8_t) ((uint16_t) ADC_results[ADC0_channel_PWM0] / (uint16_t) 256));
                     storedLowValue = (uint8_t) (ADC_results[ADC0_channel_PWM0]);
@@ -269,7 +274,8 @@ bool I2C_EEPROM_Callback(i2c_client_transfer_event_t event) {
 
 
                 case I2C2_DEBUG50:
-                    TWI0_WriteByte(debug40[0]);
+                    //TWI0_WriteByte(debug40[0]);x
+                    TWI0_WriteByte((uint8_t) (ADC_results[ADC0_channel_V_SENSE]));
                     break;
 
                 case I2C2_DEBUG51:
