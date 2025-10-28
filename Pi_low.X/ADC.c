@@ -97,9 +97,6 @@ void roundrobbin_ADC_Callback(void) {
                     current_ADC_channel = ADC0_channel_PWM3;
                     break;
                 case ADC0_channel_PWM3:
-                    current_ADC_channel = ADC0_channel_V_SENSE;
-                    VREF_ADC0REF = VREF_REFSEL_4V096_gc | 0x80;
-                //    break;
                 default:
                     // error ?
                     current_ADC_channel = ADC0_channel_V_SENSE;
